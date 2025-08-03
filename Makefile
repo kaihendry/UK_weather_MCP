@@ -1,6 +1,7 @@
-.PHONY: cardinham-forcast
-cardinham-forcast:
-	curl "http://datapoint.metoffice.gov.uk/public/data/val/wxobs/all/json/3823?res=hourly&key=$(MET_OFFICE_API_KEY)" | jq .
+.PHONY: cardinham-hourly
+locationId = 3823
+cardinham-hourly:
+	curl "http://datapoint.metoffice.gov.uk/public/data/val/wxobs/all/json/$(locationId)?res=hourly&key=$(MET_OFFICE_API_KEY)" | jq .
 
 stations.json:
 	curl http://datapoint.metoffice.gov.uk/public/data/val/wxfcs/all/json/sitelist?key=$(MET_OFFICE_API_KEY) | jq . > stations.json

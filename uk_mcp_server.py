@@ -1,8 +1,16 @@
+import logging
 import os
 import json
 from typing import Any
 import httpx
 from mcp.server.fastmcp import FastMCP
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
 mcp = FastMCP("UK_weather")
@@ -11,12 +19,16 @@ mcp = FastMCP("UK_weather")
 MET_OFFICE_API_BASE = "http://datapoint.metoffice.gov.uk/public/data/val"
 MET_OFFICE_API_KEY = os.getenv("MET_OFFICE_API_KEY")
 
+# WARNING: API TO BE RETIRED https://www.metoffice.gov.uk/services/data/datapoint/datapoint-retirement-faqs
 # https://www.metoffice.gov.uk/services/data/datapoint/api-reference#location-specific
 
 if not MET_OFFICE_API_KEY:
+    logger.error("MET_OFFICE_API_KEY environment variable not set")
     raise ValueError(
         "MET_OFFICE_API_KEY environment variable not set. Please set it in your .bashrc or similar."
     )
+else:
+    logger.info("Met Office API key loaded successfully")
 
 # https://www.metoffice.gov.uk/services/data/datapoint/code-definitions
 WEATHER_CODES = {
@@ -73,6 +85,7 @@ def lookup_station_id(query_name: str) -> str | None:
         The station ID if found, None otherwise
     """
     try:
+        logger.debug(f"Looking up station ID for location: {query_name}")
         with open("stations.json", "r") as f:
             data = json.load(f)
 
@@ -81,17 +94,20 @@ def lookup_station_id(query_name: str) -> str | None:
         # First try exact match (case insensitive)
         for location in locations:
             if location["name"].lower() == query_name.lower():
+                logger.debug(f"Found exact match for {query_name}: {location['id']}")
                 return location["id"]
 
         # Then try partial match (case insensitive)
         for location in locations:
             if query_name.lower() in location["name"].lower():
+                logger.debug(f"Found partial match for {query_name}: {location['id']} ({location['name']})")
                 return location["id"]
 
+        logger.warning(f"No station found for location: {query_name}")
         return None
 
     except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
-        print(f"Error reading stations.json: {e}")
+        logger.error(f"Error reading stations.json: {e}")
         return None
 
 
@@ -106,14 +122,16 @@ async def make_met_office_request(
 
     async with httpx.AsyncClient() as client:
         try:
+            logger.debug(f"Making request to Met Office API: {url}")
             response = await client.get(url, params=params, timeout=30.0)
             response.raise_for_status()
+            logger.debug("Successfully received response from Met Office API")
             return response.json()
         except httpx.HTTPStatusError as e:
-            print(f"HTTP Error: {e.response.status_code} - {e.response.text}")
+            logger.error(f"HTTP Error: {e.response.status_code} - {e.response.text}")
             return None
         except Exception as e:
-            print(f"An error occurred: {e}")
+            logger.error(f"An error occurred: {e}")
             return None
 
 
@@ -129,6 +147,9 @@ async def get_hourly_observations(name: str) -> str:
     if not locid:
         return f"Location '{name}' not found. Please check the spelling or try a different location name."
 
+    # log the lookup
+    logger.info(f"Looking up station ID for location: {name} -> {locid}")
+
     url = f"{MET_OFFICE_API_BASE}/wxobs/all/json/{locid}"
     params = {
         "res": "hourly",
@@ -136,6 +157,7 @@ async def get_hourly_observations(name: str) -> str:
     data = await make_met_office_request(url, params=params)
 
     if not data:
+        logger.error(f"Failed to fetch observations data for location: {name} (ID: {locid})")
         return "Unable to fetch observations data for this location."
 
     try:
@@ -143,16 +165,16 @@ async def get_hourly_observations(name: str) -> str:
         site_rep = data["SiteRep"]
         location = site_rep["DV"]["Location"]
         location_name = location["name"]
-        
+
         observations = [f"Hourly observations for {location_name}:"]
-        
+
         # Process each day's data
         for period in location["Period"]:
             date = period["value"]  # e.g., "2025-08-03Z"
             date_formatted = date.replace("Z", "")
-            
+
             observations.append(f"\n=== {date_formatted} ===")
-            
+
             # Process each hourly report
             for rep in period["Rep"]:
                 # The '$' field contains time in minutes since midnight
@@ -160,7 +182,7 @@ async def get_hourly_observations(name: str) -> str:
                 hours = time_minutes // 60
                 minutes = time_minutes % 60
                 time_str = f"{hours:02d}:{minutes:02d}"
-                
+
                 # Extract weather data
                 temp = rep.get("T", "N/A")
                 humidity = rep.get("H", "N/A")
@@ -171,23 +193,25 @@ async def get_hourly_observations(name: str) -> str:
                 weather_code = rep.get("W", "NA")
                 visibility = rep.get("V", "N/A")
                 dew_point = rep.get("Dp", "N/A")
-                
+
                 weather_desc = get_weather_description(weather_code)
-                
+
                 observation = f"""
 {time_str} - Temp: {temp}°C, Weather: {weather_desc}
          Humidity: {humidity}%, Pressure: {pressure}hPa
          Wind: {wind_speed}mph from {wind_dir} (gusts {wind_gust}mph)
          Visibility: {visibility}m, Dew Point: {dew_point}°C"""
-                
+
                 observations.append(observation)
-        
+
         return "\n".join(observations)
-        
+
     except (KeyError, IndexError, ValueError) as e:
+        logger.error(f"Failed to parse observations data for {name}: {str(e)}")
         return f"Failed to parse the observations data: {str(e)}. The structure might have changed or the location is invalid."
 
 
 if __name__ == "__main__":
     # Initialize and run the server
+    logger.info("Starting UK Weather MCP Server")
     mcp.run(transport="stdio")
