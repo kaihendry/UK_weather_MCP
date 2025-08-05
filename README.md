@@ -1,5 +1,7 @@
 # UK Weather MCP Server
 
+This code is based on the example from https://modelcontextprotocol.io/quickstart/server
+
 WARNING: [This API will stop working in December 2025](https://www.metoffice.gov.uk/services/data/datapoint/datapoint-retirement-faqs)
 
 <img src="met-api-key.png">
