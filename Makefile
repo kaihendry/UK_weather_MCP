@@ -10,4 +10,4 @@ clean:
 	rm -f stations.json
 
 debug:
-	npx @modelcontextprotocol/inspector uv run uk_mcp_server.py
+	npx @modelcontextprotocol/inspector uv run UK_Met_Office_Site_Specific_Forecast_MCP.py
