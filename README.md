@@ -1,13 +1,8 @@
 # UK Weather MCP Server
 
-This code is based on the example from https://modelcontextprotocol.io/quickstart/server
+This code is based on the example from https://modelcontextprotocol.io/quickstart/server.
 
-WARNING: [This API will stop working in December 2025](https://www.metoffice.gov.uk/services/data/datapoint/datapoint-retirement-faqs)
+Many thanks to Steven Meers
 
-<img src="met-api-key.png">
-
-    claude mcp add -s project ukweather -e MET_OFFICE_API_KEY=... -- uv run uk_mcp_server.py
-
-# Example
-
-    claude --debug -p "What is the weather in Cardinham?"
+* get_hourly_forecast
+* get_daily_forecast
