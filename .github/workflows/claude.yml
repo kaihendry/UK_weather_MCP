@@ -6,14 +6,12 @@ jobs:
   claude:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
       - run: |
+          npx -y @modelcontextprotocol/inspector --cli --method tools/list -- uv run UK_Met_Office_Site_Specific_Forecast_MCP.py
           npx @anthropic-ai/claude-code mcp add ukweather -s project -e MET_OFFICE_API_KEY=${{ secrets.MET_OFFICE_API_KEY }} -- uv run UK_Met_Office_Site_Specific_Forecast_MCP.py
-          cat .mcp.json
+          md5sum .mcp.json
           npx @anthropic-ai/claude-code --dangerously-skip-permissions --debug -p "What is the hourly forecast for Bodmin (latitude: 50.4715, longitude: -4.7243)?"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
