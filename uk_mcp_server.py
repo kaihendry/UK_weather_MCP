@@ -7,8 +7,7 @@ from mcp.server.fastmcp import FastMCP
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -100,7 +99,9 @@ def lookup_station_id(query_name: str) -> str | None:
         # Then try partial match (case insensitive)
         for location in locations:
             if query_name.lower() in location["name"].lower():
-                logger.debug(f"Found partial match for {query_name}: {location['id']} ({location['name']})")
+                logger.debug(
+                    f"Found partial match for {query_name}: {location['id']} ({location['name']})"
+                )
                 return location["id"]
 
         logger.warning(f"No station found for location: {query_name}")
@@ -157,7 +158,9 @@ async def get_hourly_observations(name: str) -> str:
     data = await make_met_office_request(url, params=params)
 
     if not data:
-        logger.error(f"Failed to fetch observations data for location: {name} (ID: {locid})")
+        logger.error(
+            f"Failed to fetch observations data for location: {name} (ID: {locid})"
+        )
         return "Unable to fetch observations data for this location."
 
     try:

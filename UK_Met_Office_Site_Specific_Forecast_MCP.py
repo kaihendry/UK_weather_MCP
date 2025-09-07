@@ -4,7 +4,7 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 # Initialize FastMCP server
-mcp = FastMCP("UK_weather")
+mcp = FastMCP("UK weather", port=7860)
 
 # Constants
 MET_OFFICE_API_BASE = "https://data.hub.api.metoffice.gov.uk/sitespecific/v0/point"
@@ -109,7 +109,7 @@ async def get_hourly_forecast(latitude: float, longitude: float) -> str:
         location_info = f"Location: {coordinates[1]:.4f}°N, {coordinates[0]:.4f}°E"
 
         forecasts = [f"Hourly forecast for {location_info}:"]
-        
+
         for period in time_series:
             # Parse the hourly data fields
             time = period["time"]
@@ -128,7 +128,9 @@ async def get_hourly_forecast(latitude: float, longitude: float) -> str:
             weather_desc = get_weather_description(weather_code)
 
             # Convert units for better readability
-            wind_speed_mph = f"{wind_speed * 2.237:.1f}" if wind_speed != "N/A" else "N/A"
+            wind_speed_mph = (
+                f"{wind_speed * 2.237:.1f}" if wind_speed != "N/A" else "N/A"
+            )
             pressure_mb = f"{pressure / 100:.1f}" if pressure != "N/A" else "N/A"
             visibility_km = f"{visibility / 1000:.1f}" if visibility != "N/A" else "N/A"
 
@@ -218,4 +220,4 @@ Wind Speed (10m): {day_wind_speed} mph
 
 if __name__ == "__main__":
     # Initialize and run the server
-    mcp.run(transport="stdio")
+    mcp.run(transport="streamable-http")
