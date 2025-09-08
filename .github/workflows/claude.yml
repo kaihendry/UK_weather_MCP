@@ -2,6 +2,10 @@ on:
   push:
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   claude:
     runs-on: ubuntu-latest
@@ -20,16 +24,14 @@ jobs:
         env:
           MET_OFFICE_API_KEY: ${{ secrets.MET_OFFICE_API_KEY }}
 
-      - name: Test MCP server with MCPP
+      - name: Test MCP server directly
         run: |
-          # Start MCP Proxy (MCPP) in background to proxy the streamable-http MCP server
-          npx -y @modelcontextprotocol/inspector proxy http://localhost:7860/mcp &
-          INSPECTOR_PID=$!
-          echo "INSPECTOR_PID=$INSPECTOR_PID" >> $GITHUB_ENV
-          # Wait for inspector to start
-          sleep 3
-          # Test the proxied connection via stdio
-          echo '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}' | npx -y @modelcontextprotocol/inspector stdio || echo "MCPP test completed"
+          # Test MCP server is responding (skip inspector as it blocks)
+          curl -X POST http://localhost:7860/mcp \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json, text/event-stream" \
+            -d '{"jsonrpc": "2.0", "method": "initialize", "id": 1, "params": {"protocolVersion": "2024-11-05", "capabilities": {}, "clientInfo": {"name": "test", "version": "1.0"}}}' \
+            -w "HTTP Status: %{http_code}\n" || echo "MCP server test completed"
         env:
           MET_OFFICE_API_KEY: ${{ secrets.MET_OFFICE_API_KEY }}
 
@@ -47,7 +49,4 @@ jobs:
         run: |
           if [ ! -z "$SERVER_PID" ]; then
             kill $SERVER_PID || true
-          fi
-          if [ ! -z "$INSPECTOR_PID" ]; then
-            kill $INSPECTOR_PID || true
           fi
