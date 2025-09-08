@@ -20,22 +20,19 @@ jobs:
         env:
           MET_OFFICE_API_KEY: ${{ secrets.MET_OFFICE_API_KEY }}
 
-      - name: Test MCP server directly
+      - name: Test MCP server with MCPP
         run: |
-          # Test the MCP server endpoint directly with JSON-RPC and required headers
-          curl -X POST http://localhost:7860/mcp \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json, text/event-stream" \
-            -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}' \
-            --fail-with-body || echo "MCP endpoint test failed"
+          # Use MCP Proxy (MCPP) to test the streamable-http MCP server
+          npx -y @modelcontextprotocol/inspector proxy http://localhost:7860/mcp --method tools/list
         env:
           MET_OFFICE_API_KEY: ${{ secrets.MET_OFFICE_API_KEY }}
 
-      - name: Configure Claude Code for HTTP transport
+      - name: Configure Claude Code for HTTP transport  
         run: |
-          npx @anthropic-ai/claude-code mcp add ukweather -s project -t streamable-http -u http://localhost:7860/mcp -e MET_OFFICE_API_KEY=${{ secrets.MET_OFFICE_API_KEY }}
+          # Use proper Claude Code mcp add syntax (no -u flag)
+          npx @anthropic-ai/claude-code mcp add ukweather --source=project --transport=streamable-http --url=http://localhost:7860/mcp --env=MET_OFFICE_API_KEY=${{ secrets.MET_OFFICE_API_KEY }}
           md5sum .mcp.json
-          npx @anthropic-ai/claude-code --dangerously-skip-permissions --debug -p "What is the hourly forecast for Bodmin (latitude: 50.4715, longitude: -4.7243)?"
+          npx @anthropic-ai/claude-code --dangerously-skip-permissions --debug --prompt="What is the hourly forecast for Bodmin (latitude: 50.4715, longitude: -4.7243)?"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
