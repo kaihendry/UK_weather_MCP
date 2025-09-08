@@ -8,14 +8,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: |
-          npx -y @modelcontextprotocol/inspector --cli --method tools/list -- uv run UK_Met_Office_Site_Specific_Forecast_MCP.py
+      - name: Start MCP server in background
+        run: |
+          uv run UK_Met_Office_Site_Specific_Forecast_MCP.py &
+          SERVER_PID=$!
+          echo "SERVER_PID=$SERVER_PID" >> $GITHUB_ENV
+          # Wait for server to start
+          sleep 5
+          # Test that server is responding
+          curl -f http://localhost:7860/health || echo "Server health check failed"
         env:
           MET_OFFICE_API_KEY: ${{ secrets.MET_OFFICE_API_KEY }}
 
-      - run: |
-          npx @anthropic-ai/claude-code mcp add ukweather -s project -e MET_OFFICE_API_KEY=${{ secrets.MET_OFFICE_API_KEY }} -- uv run UK_Met_Office_Site_Specific_Forecast_MCP.py
+      - name: Test MCP server with inspector
+        run: |
+          npx -y @modelcontextprotocol/inspector --cli --transport http --url http://localhost:7860/mcp --method tools/list
+        env:
+          MET_OFFICE_API_KEY: ${{ secrets.MET_OFFICE_API_KEY }}
+
+      - name: Configure Claude Code for HTTP transport
+        run: |
+          npx @anthropic-ai/claude-code mcp add ukweather -s project -t streamable-http -u http://localhost:7860/mcp -e MET_OFFICE_API_KEY=${{ secrets.MET_OFFICE_API_KEY }}
           md5sum .mcp.json
           npx @anthropic-ai/claude-code --dangerously-skip-permissions --debug -p "What is the hourly forecast for Bodmin (latitude: 50.4715, longitude: -4.7243)?"
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ ! -z "$SERVER_PID" ]; then
+            kill $SERVER_PID || true
+          fi

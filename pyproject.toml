@@ -1,7 +1,7 @@
 [project]
 name = "weatherforecast-mcp"
 version = "0.1.0"
-description = "A MCP server for US and UK weather forecasts"
+description = "A MCP server for UK weather forecasts"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -10,5 +10,4 @@ dependencies = [
 ]
 
 [tool.mcp.plugins]
-US_weather = "us_mcp_server:mcp"
 UK_weather = "UK_Met_Office_Site_Specific_Forecast_MCP:mcp"
