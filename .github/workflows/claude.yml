@@ -37,8 +37,8 @@ jobs:
 
       - name: Configure Claude Code for HTTP transport  
         run: |
-          # Try simpler Claude Code mcp add syntax 
-          npx @anthropic-ai/claude-code mcp add ukweather http://localhost:7860/mcp --env MET_OFFICE_API_KEY=${{ secrets.MET_OFFICE_API_KEY }}
+          # Use -s project flag to create .mcp.json file
+          npx @anthropic-ai/claude-code mcp add ukweather http://localhost:7860/mcp -s project --env MET_OFFICE_API_KEY=${{ secrets.MET_OFFICE_API_KEY }}
           md5sum .mcp.json
           npx @anthropic-ai/claude-code --dangerously-skip-permissions --debug -p "What is the hourly forecast for Bodmin (latitude: 50.4715, longitude: -4.7243)?"
         env:
